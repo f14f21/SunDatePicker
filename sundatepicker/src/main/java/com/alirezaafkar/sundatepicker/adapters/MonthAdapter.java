@@ -1,5 +1,6 @@
 package com.alirezaafkar.sundatepicker.adapters;
 
+import android.support.annotation.NonNull;
 import android.support.v7.widget.RecyclerView;
 import android.view.LayoutInflater;
 import android.view.View;
@@ -20,72 +21,84 @@ public class MonthAdapter extends RecyclerView.Adapter<MonthAdapter.ViewHolder> 
     private static final int TYPE_TITLE = 1;
     private static final int TYPE_NONE = 2;
 
+    private int mYear;
     private int mMonth;
     private JDF mToday;
+    private Long maxDate;
+    private Long minDate;
     private int mStartDay;
-    private int mMaxMonth;
     private DateInterface mCallback;
     private View.OnClickListener mOnClickListener;
 
-    public MonthAdapter(DateInterface callback, View.OnClickListener onClickListener,
-                        int currentMonth, int maxMonth) {
-        mMaxMonth = maxMonth;
-        mCallback = callback;
-        mMonth = currentMonth;
-        mOnClickListener = onClickListener;
-
+    public MonthAdapter(DateInterface callback, View.OnClickListener onClickListener, int currentMonth, int chosenYear) {
         mToday = new JDF();
+        mYear = chosenYear;
+        mCallback = callback;
+        mMonth = currentMonth + 1;
+        mOnClickListener = onClickListener;
+        maxDate = callback.getDateItem().getMaxDate().getTimeInMillis();
+        minDate = callback.getDateItem().getMinDate().getTimeInMillis();
+
         try {
-            mStartDay = new JDF().getIranianDay(mCallback.getYear(), mMonth + 1, 1);
+            mStartDay = new JDF().getIranianDay(mYear, mMonth, 1);
         } catch (ParseException ignored) {
         }
     }
 
     private boolean isSelected(int day) {
-        return mCallback.getMonth() == mMonth + 1 &&
-                mCallback.getDay() == day + 1;
+        return mCallback.getMonth() == mMonth &&
+                mCallback.getDay() == day &&
+                mCallback.getYear() == mYear;
     }
 
     private boolean isToday(int day) {
-        return (mMonth + 1 == mToday.getIranianMonth()
-                && day + 1 == mToday.getIranianDay()
-                && mCallback.getYear() == mToday.getIranianYear());
+        return (mMonth == mToday.getIranianMonth()
+                && day == mToday.getIranianDay()
+                && mYear == mToday.getIranianYear());
     }
 
+    @NonNull
     @Override
-    public MonthAdapter.ViewHolder onCreateViewHolder(ViewGroup parent, int viewType) {
+    public MonthAdapter.ViewHolder onCreateViewHolder(@NonNull ViewGroup parent, int viewType) {
         View view = LayoutInflater.from(parent.getContext())
                 .inflate(R.layout.item_day, parent, false);
         return new ViewHolder(view);
     }
 
     @Override
-    public void onBindViewHolder(MonthAdapter.ViewHolder holder, int position) {
+    public void onBindViewHolder(@NonNull MonthAdapter.ViewHolder holder, int position) {
         String text = null;
+        int day;
+        boolean checked = false;
         boolean selected = false;
         boolean clickable = false;
 
         int viewType = getItemViewType(position);
 
         if (viewType == TYPE_TITLE) {
-            clickable = false;
-            selected = false;
             text = mCallback.getWeekDays()[position].substring(0, 1);
         } else if (viewType == TYPE_DAY) {
-            clickable = true;
-            position = getDayIndex(position);
-            selected = isSelected(position);
-            text = String.valueOf(position + 1);
+            day = getDay(position);
+            selected = isSelected(day);
+            text = String.valueOf(day);
+            clickable = isSelectableDay(day);
+            checked = isToday(day);
         }
 
-        holder.mTextView.setChecked(isToday(position));
         holder.mTextView.setClickable(clickable);
         holder.mTextView.setSelected(selected);
+        holder.mTextView.setEnabled(clickable);
+        holder.mTextView.setChecked(checked);
         holder.mTextView.setText(text);
     }
 
-    private int getDayIndex(int position) {
-        return position - mStartDay - 7;
+    private boolean isSelectableDay(int day) {
+        long date = new JDF(mYear, mMonth, day).getTimeInMillis();
+        return date >= minDate && date <= maxDate;
+    }
+
+    private int getDay(int position) {
+        return (position - mStartDay - 7) + 1;
     }
 
     @Override
@@ -102,13 +115,10 @@ public class MonthAdapter extends RecyclerView.Adapter<MonthAdapter.ViewHolder> 
     @Override
     public int getItemCount() {
         int days = 30;
-        if (mMonth < 6)
+        if (mMonth <= 6)
             days = 31;
-        if (mMonth == 11 && !JDF.isLeapYear(mCallback.getYear()))
+        if (mMonth == 12 && !JDF.isLeapYear(mYear))
             days = 29;
-
-        if (mMaxMonth == mMonth + 1)
-            days = mToday.getIranianDay();
 
         return days + 7 + mStartDay;
     }
@@ -116,7 +126,7 @@ public class MonthAdapter extends RecyclerView.Adapter<MonthAdapter.ViewHolder> 
     public class ViewHolder extends RecyclerView.ViewHolder implements View.OnClickListener {
         private SquareTextView mTextView;
 
-        public ViewHolder(View itemView) {
+        ViewHolder(View itemView) {
             super(itemView);
             mTextView = (SquareTextView) itemView;
             mTextView.setOnClickListener(this);
@@ -124,15 +134,15 @@ public class MonthAdapter extends RecyclerView.Adapter<MonthAdapter.ViewHolder> 
 
         @Override
         public void onClick(View view) {
-            int position = getDayIndex(getLayoutPosition());
-            if (mCallback != null && position >= 0) {
-                int oldMonth = mCallback.getMonth();
-                mCallback.setDay(position + 1, mMonth + 1);
-                if (oldMonth != mMonth + 1) {
-                    mOnClickListener.onClick(view);
-                } else {
-                    notifyDataSetChanged();
-                }
+            int position = getDay(getLayoutPosition());
+            if (mCallback == null || position < 0) return;
+
+            int oldMonth = mCallback.getMonth();
+            mCallback.setDay(position, mMonth, mYear);
+            if (oldMonth != mMonth) {
+                mOnClickListener.onClick(view);
+            } else {
+                notifyDataSetChanged();
             }
         }
     }

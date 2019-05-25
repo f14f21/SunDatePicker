@@ -2,6 +2,7 @@ package com.alirezaafkar.sundatepicker.fragments;
 
 import android.annotation.SuppressLint;
 import android.os.Bundle;
+import android.support.annotation.NonNull;
 import android.support.v4.app.Fragment;
 import android.support.v7.widget.LinearLayoutManager;
 import android.support.v7.widget.RecyclerView;
@@ -17,15 +18,11 @@ import com.alirezaafkar.sundatepicker.adapters.YearAdapter;
  * Created by Alireza Afkar on 2/5/16 AD.
  */
 public class YearFragment extends Fragment {
-    private int mMinYear;
-    private int mMaxYear;
     private DateInterface mCallback;
 
-    public static YearFragment newInstance(DateInterface callback, int minYear, int maxYear) {
+    public static YearFragment newInstance(DateInterface callback) {
         YearFragment fragment = new YearFragment();
         fragment.mCallback = callback;
-        fragment.mMinYear = minYear;
-        fragment.mMaxYear = maxYear;
         return fragment;
     }
 
@@ -34,16 +31,16 @@ public class YearFragment extends Fragment {
 
     @SuppressLint("InflateParams")
     @Override
-    public View onCreateView(LayoutInflater inflater, ViewGroup container,
+    public View onCreateView(@NonNull LayoutInflater inflater, ViewGroup container,
                              Bundle savedInstanceState) {
         return LayoutInflater.from(container.getContext())
                 .inflate(R.layout.layout_recycler_view, null);
     }
 
     @Override
-    public void onViewCreated(View view, Bundle savedInstanceState) {
+    public void onViewCreated(@NonNull View view, Bundle savedInstanceState) {
         super.onViewCreated(view, savedInstanceState);
-        RecyclerView recyclerView = (RecyclerView) view.findViewById(R.id.recycler_view);
+        RecyclerView recyclerView = view.findViewById(R.id.recycler_view);
         YearAdapter adapter = new YearAdapter(mCallback, getYears());
         recyclerView.setLayoutManager(new LinearLayoutManager(getContext()));
         recyclerView.setHasFixedSize(true);
@@ -52,12 +49,14 @@ public class YearFragment extends Fragment {
     }
 
     private int[] getYears() {
-        int[] years = new int[(mMaxYear - mMinYear) + 1];
+        int maxYear = mCallback.getDateItem().getMaxDate().getIranianYear();
+        int minYear = mCallback.getDateItem().getMinDate().getIranianYear();
+        int[] years = new int[(maxYear - minYear) + 1];
+
         int counter = 0;
-        for (int i = mMinYear; i <= mMaxYear; i++) {
+        for (int i = minYear; i <= maxYear; i++) {
             years[counter++] = i;
         }
         return years;
     }
-
 }

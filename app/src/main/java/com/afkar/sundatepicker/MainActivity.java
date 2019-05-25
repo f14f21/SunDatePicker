@@ -1,11 +1,12 @@
 package com.afkar.sundatepicker;
 
-import android.content.Context;
 import android.content.res.Configuration;
 import android.os.Bundle;
 import android.support.annotation.Nullable;
-import android.support.annotation.StyleRes;
-import android.support.v4.app.FragmentActivity;
+import android.support.v4.app.ShareCompat;
+import android.support.v7.app.AppCompatActivity;
+import android.view.Menu;
+import android.view.MenuItem;
 import android.view.View;
 import android.view.View.OnClickListener;
 import android.widget.Button;
@@ -18,29 +19,19 @@ import com.alirezaafkar.sundatepicker.interfaces.DateSetListener;
 import java.util.Calendar;
 import java.util.Locale;
 
-import uk.co.chrisjenx.calligraphy.CalligraphyContextWrapper;
-
 /*
  * Created by Alireza Afkar on 2/11/16 AD.
  */
 
-public class MainActivity extends FragmentActivity implements
+public class MainActivity extends AppCompatActivity implements
         OnClickListener, DateSetListener {
     private Button mEnd;
     private Button mStart;
-    private CheckBox mDark;
     private CheckBox mFuture;
+    private CheckBox mPast;
 
     private Date mEndDate;
     private Date mStartDate;
-
-    public MainActivity() {
-    }
-
-    @Override
-    protected void attachBaseContext(Context newBase) {
-        super.attachBaseContext(CalligraphyContextWrapper.wrap(newBase));
-    }
 
     @Override
     protected void onCreate(@Nullable Bundle savedInstanceState) {
@@ -49,10 +40,10 @@ public class MainActivity extends FragmentActivity implements
 
         setContentView(R.layout.activity_main);
 
-        mEnd = (Button) findViewById(R.id.endDate);
-        mStart = (Button) findViewById(R.id.startDate);
-        mDark = (CheckBox) findViewById(R.id.darkTheme);
-        mFuture = (CheckBox) findViewById(R.id.future);
+        mEnd = findViewById(R.id.endDate);
+        mStart = findViewById(R.id.startDate);
+        mFuture = findViewById(R.id.future);
+        mPast = findViewById(R.id.past);
 
         mEndDate = new Date();
         mStartDate = new Date();
@@ -62,17 +53,41 @@ public class MainActivity extends FragmentActivity implements
     }
 
     @Override
+    public boolean onCreateOptionsMenu(Menu menu) {
+        getMenuInflater().inflate(R.menu.menu, menu);
+        return super.onCreateOptionsMenu(menu);
+    }
+
+    @Override
+    public boolean onOptionsItemSelected(MenuItem item) {
+        if (item.getItemId() == R.id.action_help) {
+            ShareCompat.IntentBuilder.from(this)
+                    .setType("message/rfc822")
+                    .addEmailTo("pesiran@gmail.com")
+                    .setSubject("SunDatePicker")
+                    .startChooser();
+        }
+        return super.onOptionsItemSelected(item);
+    }
+
+    @Override
     public void onClick(View v) {
         int id = v.getId() == R.id.startDate ? 1 : 2;
-        @StyleRes int theme = mDark.isChecked()
-                ? R.style.DarkDialogTheme
-                : R.style.DialogTheme;
+        Calendar minDate = Calendar.getInstance();
+        Calendar maxDate = Calendar.getInstance();
 
-        DatePicker.Builder builder = new DatePicker
-                .Builder()
+        if (mFuture.isChecked()) {
+            maxDate.set(Calendar.YEAR, maxDate.get(Calendar.YEAR) + 10);
+        }
+        if (mPast.isChecked()) {
+            minDate.set(Calendar.YEAR, minDate.get(Calendar.YEAR) - 10);
+        }
+
+        DatePicker.Builder builder = new DatePicker.Builder()
                 .id(id)
-                .theme(theme)
-                .future(mFuture.isChecked());
+                .minDate(minDate)
+                .maxDate(maxDate)
+                .setRetainInstance(true);
 
         if (v.getId() == R.id.startDate)
             builder.date(mStartDate.getDay(), mStartDate.getMonth(), mStartDate.getYear());
